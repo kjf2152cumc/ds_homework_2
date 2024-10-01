@@ -37,7 +37,7 @@ mta =
 
 ```
 
-## Tidy data? 
+## Tidy Data? 
 
 Write a short paragraph about this dataset – explain briefly what variables the dataset contains, describe your data cleaning steps so far, and give the dimension (rows x columns) of the resulting dataset. Are these data tidy?
 
@@ -203,6 +203,21 @@ nrow(merged_df)
 ## Writing
 
 Write a paragraph about these data; you are encouraged to use inline R. Be sure to note the number of observations in the resulting dataset, and give examples of key variables. For available data, what was the total weight of trash collected by Professor Trash Wheel? What was the total number of cigarette butts collected by Gwynnda in June of 2022?
+
+The `mr_df` dataset had `nrow(mr_df)`observations, Professor Trash Wheel `nrow(prof_df)` and Gwynnda `nrow(gwynn)`. There are `nrow(merged_df)` observations in the joined dataset `merged_df` which is equivalent to the sum of the observations in the three datasets. See `num` above. There are 15 columns including date of dumpster recording, the dumpster number for each specific trash wheel, tons of trash collected per collection time, and weights of various different types of waste. For example, Professor Trash Wheel collected `prof_trash_weight` tons of trash and Gwynnda collected `cigs_june_gwyn` cigarette butts in June of 2022.  
+
+```{r}
+prof_trash_weight=
+  merged_df |> 
+  filter(trash_wheel == "Prof. Trash Wheel")  |> 
+  summarise(total_weight_tons = sum(weight_tons, na.rm = TRUE))
+
+cigs_june_gwyn=
+  merged_df |> 
+  filter(trash_wheel == "Gwynnda", month == "June", year == 2022) |> 
+  nrow()
+```
+
 
 # Problem 3
 This problem uses data on elements of the Great British Bake Off. The show has been running for 10 seasons; in each episode, contestants compete in signature challenges, technical challenges, and a showstopper. At the end of an episode the winner is crowned “Star Baker” (and winner in the last episode of a season), and a loser is eliminated.
