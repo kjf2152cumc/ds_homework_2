@@ -32,7 +32,9 @@ mta =
    mta |> 
   select(line, station_name, station_latitude, station_longitude, route1:route11 ,
          entry, vending, entrance_type, ada) |> 
-    mutate(entry = ifelse(entry == "YES", TRUE, FALSE))
+    mutate(entry = ifelse(entry == "YES", TRUE, FALSE)) |> 
+    mutate(across(route1:route11, as.character)) 
+
 ```
 
 ## Tidy data? 
@@ -45,22 +47,100 @@ ncol(mta_clean)
 head(mta_clean)
 summary(mta_clean)
 ```
-The initial dataset (which I nicknamed "mta" in my original dataframe) had 1868 rows and 32 columns. I created a new dataframe called "mta_clean" which used mta, kept the assigned variables, and turned the "entry" variable into a logical variable. In this new dataset there are 1868 rows and 19 columns. I believe these data are tidy. WHY? 
+
+The initial dataset (which I nicknamed "mta" in my original dataframe) had 1868 rows and 32 columns. I created a new dataframe called "mta_clean" which used mta, kept the assigned variables, and turned the "entry" variable into a logical variable. In this new dataset there are 1868 rows and 19 columns. The way that route is recorded is not tidy. I think it would make more sense to have a column for route that assigned one route name per row (so each entry would probably have mutiple rows). I was going to make it longer now; however, doing so would make it more difficult to answer a question about proportion of entrances with vending below. 
 
 ## Investigate
 
 How many distinct stations are there? Note that stations are identified both by name and by line (e.g. 125th St 8th Avenue; 125st Broadway; 125st Lenox); the distinct function may be useful here.
 
+**There are 465 distinct stations.**
+
+```{r}
+num_distinct_stations =
+  mta_clean |> 
+  distinct(line, station_name) 
+
+nrow(num_distinct_stations)
+```
+
 How many stations are ADA compliant?
 
-What proportion of station entrances / exits without vending allow entrance?
+**84 stations are ADA compliant.**
+
+```{r}
+num_ada_true =
+  mta_clean |> 
+  filter(ada == TRUE) |> 
+  distinct(line, station_name) 
+
+nrow(num_ada_true)
+```
+
+What proportion of entrances without vending allow entrance?
+
+**37.7% of the station entrances without vending allow entrance.**
+
+```{r}
+prop =
+  mta_clean |> 
+  filter(vending == "NO") |> 
+  summarise(proportion = sum(entry == TRUE) / n()) |> 
+  pull(proportion)
+
+prop
+```
 
 Reformat data so that route number and route name are distinct variables. How many distinct stations serve the A train? 
 
+**60 distinct stations serve the A train.**
+
+```{r}
+mta_longer = 
+  mta_clean |> 
+  pivot_longer(
+    cols = route1:route11, 
+    names_to = "route_var", 
+    values_to = "route_name"
+  ) |> 
+  filter(!is.na(route_name)) |>   
+  separate(
+    route_var, 
+    into = c("route_number", "route_prefix"), 
+    sep = "route", 
+    convert = TRUE  
+  ) |> 
+  select(-route_prefix) 
+
+a_train =
+  mta_longer |> 
+  filter(route_name == "A") |> 
+  distinct(line, station_name, ada) 
+
+nrow(a_train)
+
+```
+
 Of the stations that serve the A train, how many are ADA compliant?
 
+**17 of the stations that serve the A train are ADA compliant.**
+
+```{r}
+compliant = 
+  a_train |> 
+  filter(ada == TRUE) 
+
+nrow(compliant)
+```
+```{bash}
+git config --global http.postBuffer 157286400
+git config --global --get http.postBuffer # troubleshooting github push error
+```
+
+
 # Problem 2
-This problem uses the Mr. Trash Wheel dataset, available as an Excel file on the course website.
+
+## Read & Clean
 
 Read and clean the Mr. Trash Wheel sheet:
 
