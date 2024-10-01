@@ -15,19 +15,49 @@ library(haven)
 library(readxl)
 ```
 
-
 # Problem 1
+
+## Read & Clean
 
 Read and clean the data; retain line, station, name, station latitude / longitude, routes served, entry, vending, entrance type, and ADA compliance. Convert the entry variable from character (YES vs NO) to a logical variable (the ifelse or case_match function may be useful).
 
+```{r read/clean}
+mta = 
+  read_csv("Data/NYC_Transit_Subway_Entrance_And_Exit_Data.csv", 
+           show_col_types = FALSE) |> 
+  janitor::clean_names()
+
+
+ mta_clean = 
+   mta |> 
+  select(line, station_name, station_latitude, station_longitude, route1:route11 ,
+         entry, vending, entrance_type, ada) |> 
+    mutate(entry = ifelse(entry == "YES", TRUE, FALSE))
+```
+
+## Tidy data? 
+
 Write a short paragraph about this dataset – explain briefly what variables the dataset contains, describe your data cleaning steps so far, and give the dimension (rows x columns) of the resulting dataset. Are these data tidy?
 
-Answer the following questions using these data:
+```{r summary stats}
+nrow(mta_clean)
+ncol(mta_clean)
+head(mta_clean)
+summary(mta_clean)
+```
+The initial dataset (which I nicknamed "mta" in my original dataframe) had 1868 rows and 32 columns. I created a new dataframe called "mta_clean" which used mta, kept the assigned variables, and turned the "entry" variable into a logical variable. In this new dataset there are 1868 rows and 19 columns. I believe these data are tidy. WHY? 
+
+## Investigate
 
 How many distinct stations are there? Note that stations are identified both by name and by line (e.g. 125th St 8th Avenue; 125st Broadway; 125st Lenox); the distinct function may be useful here.
+
 How many stations are ADA compliant?
+
 What proportion of station entrances / exits without vending allow entrance?
-Reformat data so that route number and route name are distinct variables. How many distinct stations serve the A train? Of the stations that serve the A train, how many are ADA compliant?
+
+Reformat data so that route number and route name are distinct variables. How many distinct stations serve the A train? 
+
+Of the stations that serve the A train, how many are ADA compliant?
 
 # Problem 2
 This problem uses the Mr. Trash Wheel dataset, available as an Excel file on the course website.
