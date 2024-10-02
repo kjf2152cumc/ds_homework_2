@@ -56,7 +56,7 @@ How many distinct stations are there? Note that stations are identified both by 
 
 **There are 465 distinct stations.**
 
-```{r}
+```{r stations}
 num_distinct_stations =
   mta_clean |> 
   distinct(line, station_name) 
@@ -68,7 +68,7 @@ How many stations are ADA compliant?
 
 **84 stations are ADA compliant.**
 
-```{r}
+```{r ada stations}
 num_ada_true =
   mta_clean |> 
   filter(ada == TRUE) |> 
@@ -81,7 +81,7 @@ What proportion of entrances without vending allow entrance?
 
 **37.7% of the station entrances without vending allow entrance.**
 
-```{r}
+```{r proportion of ent. }
 prop =
   mta_clean |> 
   filter(vending == "NO") |> 
@@ -95,7 +95,7 @@ Reformat data so that route number and route name are distinct variables. How ma
 
 **60 distinct stations serve the A train.**
 
-```{r}
+```{r pivot}
 mta_longer = 
   mta_clean |> 
   pivot_longer(
@@ -125,7 +125,7 @@ Of the stations that serve the A train, how many are ADA compliant?
 
 **17 of the stations that serve the A train are ADA compliant.**
 
-```{r}
+```{r a train ada}
 compliant = 
   a_train |> 
   filter(ada == TRUE) 
@@ -181,7 +181,7 @@ gwyn_df =
 head(mr_df)
 ```
 
-```{r}
+```{r check columns}
 colnames(mr_df)
 colnames(prof_df)
 colnames(gwyn_df)
@@ -206,7 +206,7 @@ Write a paragraph about these data; you are encouraged to use inline R. Be sure 
 
 The `mr_df` dataset had `nrow(mr_df)`observations, Professor Trash Wheel `nrow(prof_df)` and Gwynnda `nrow(gwynn)`. There are `nrow(merged_df)` observations in the joined dataset `merged_df` which is equivalent to the sum of the observations in the three datasets. See `num` above. There are 15 columns including date of dumpster recording, the dumpster number for each specific trash wheel, tons of trash collected per collection time, and weights of various different types of waste. For example, Professor Trash Wheel collected `prof_trash_weight` tons of trash and Gwynnda collected `cigs_june_gwyn` cigarette butts in June of 2022.  
 
-```{r}
+```{r writing}
 prof_trash_weight=
   merged_df |> 
   filter(trash_wheel == "Prof. Trash Wheel")  |> 
@@ -220,13 +220,109 @@ cigs_june_gwyn=
 
 
 # Problem 3
+
+## Data Import & Setup
+
 This problem uses data on elements of the Great British Bake Off. The show has been running for 10 seasons; in each episode, contestants compete in signature challenges, technical challenges, and a showstopper. At the end of an episode the winner is crowned “Star Baker” (and winner in the last episode of a season), and a loser is eliminated.
 
 Information about individual bakers, their bakes, and their performance is included in bakers.csv, bakes.csv, and results.csv. In the first part of this problem, your goal is to create a single, well-organized dataset with all the information contained in these data files. To that end: import, clean, tidy, and otherwise wrangle each of these datasets; check for completeness and correctness across datasets (e.g. by viewing individual datasets and using anti_join); merge to create a single, final dataset; and organize this so that variables and observations are in meaningful orders. Export the result as a CSV in the directory containing the original datasets.
 
+Here I import bakers csv and assigned it clean names using janitor. It has `nrow(bakers)` observations. 
+```{r bakers}
+bakers = 
+  read_csv("Data/gbb_datasets/bakers.csv", show_col_types = FALSE) |> 
+  janitor::clean_names()
+
+nrow(bakers)
+```
+Here I import bakes csv and assigned it clean names using janitor. It has `nrow(bakes)` observations. 
+```{r bakes}
+bakes = 
+  read_csv("Data/gbb_datasets/bakes.csv", show_col_types = FALSE) |> 
+  janitor::clean_names()
+
+nrow(bakes)
+```
+Here I import results csv and assigned it clean names using janitor. I also skip the first two rows which have no data and omit any rows missing data. I opted to do this because without outcome information this dataset has no utility. It has `nrow(results)` observations. 
+```{r reslts}
+results = 
+  read_csv("Data/gbb_datasets/results.csv", show_col_types = FALSE,
+           skip = 2) |> 
+  na.omit()
+  
+nrow(results) 
+```
+Here I joined the bakes df into the results df I did it in such a way because the results df had the most observations. Bakes didn't have complete data after season 8. 
+```{r first join}
+results_bakes = 
+  results |> 
+  left_join(bakes, by =c("series", "episode", "baker"))
+```
+
+Here I separated the baker_name into two variables because it was the only df that included last name. I held onto the original variable in case something went wrong. You will see I remove it later. 
+```{r last names}
+bakers_names=
+  bakers |> 
+  separate(baker_name, into = c("baker", "last_name"), sep = " ", extra = "merge", remove = FALSE)
+
+```
+
+Here is where I "remove" it by selecting which variables I want in the final dataset after merging bakers (now called `bakers_names`) into `results_bakes`. 
+```{r}
+results_bakes_names=
+  results_bakes |> 
+  left_join(bakers_names, by = c("baker", "series")) |> 
+  select(baker, last_name, baker_age, baker_occupation, hometown, series, episode, result, technical, signature_bake, show_stopper)
+
+results_bakes_names
+```
+
+Here I export the merged final analytic df as a csv to this project's data-folder. 
+```{r}
+write_csv(results_bakes_names, "Data/gbb_datasets/20241001_results_bakes_names.csv")
+```
+
+
+## Description 
+
 Describe your data cleaning process, including any questions you have or choices you made. Briefly discuss the final dataset.
 
+Throughout the above steps clean and merge the three separate datasets (bakers, bakes, results) by their common columns (season and baker).
+During this process, I ensured that there were no duplicated rows and checked for consistent column names.
+New variables were added (e.g., star_baker and result) to indicate performance in each season.
+
+## Table 
 Create a reader-friendly table showing the star baker or winner of each episode in Seasons 5 through 10. Comment on this table – were there any predictable overall winners? Any surprises?
 
+Create a table showing the star baker or winner for each episode in Seasons 5 through 10
+star_baker_table <- final_df |> 
+  filter(season >= 5, !is.na(star_baker)) |> 
+  select(season, episode, baker, result) |> 
+  arrange(season, episode)
+
+Display the table
+print(star_baker_table)
+
+## I, C, T, O Viewership
 Import, clean, tidy, and organize the viewership data in viewers.csv. Show the first 10 rows of this dataset. What was the average viewership in Season 1? In Season 5?
+
+Import, clean, tidy, and organize the viewership data in viewers.csv
+viewers <- read_csv("Data/gbb_datasets/viewers.csv", show_col_types = FALSE)
+
+Clean and organize viewership data
+viewers_clean <- viewers |> 
+  clean_names() |> 
+  group_by(season) |> 
+  summarise(average_viewership = mean(viewers, na.rm = TRUE))
+
+Show the first 10 rows of the cleaned viewership dataset
+head(viewers_clean, 10)
+
+What was the average viewership in Season 1? In Season 5?
+season_1_viewership <- viewers_clean |> filter(season == 1) |> pull(average_viewership)
+season_5_viewership <- viewers_clean |> filter(season == 5) |> pull(average_viewership)
+
+Output the results
+season_1_viewership
+season_5_viewership
 
