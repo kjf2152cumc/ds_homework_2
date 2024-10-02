@@ -13,6 +13,7 @@ output:
 library(tidyverse)
 library(haven)
 library(readxl)
+library(knitr)
 ```
 
 # Problem 1
@@ -48,7 +49,7 @@ head(mta_clean)
 summary(mta_clean)
 ```
 
-The initial dataset (which I nicknamed "mta" in my original dataframe) had 1868 rows and 32 columns. I created a new dataframe called "mta_clean" which used mta, kept the assigned variables, and turned the "entry" variable into a logical variable. In this new dataset there are 1868 rows and 19 columns. The way that route is recorded is not tidy. I think it would make more sense to have a column for route that assigned one route name per row (so each entry would probably have mutiple rows). I was going to make it longer now; however, doing so would make it more difficult to answer a question about proportion of entrances with vending below. 
+**The initial dataset (which I nicknamed "mta" in my original dataframe) had 1868 rows and 32 columns. I created a new dataframe called "mta_clean" which used mta, kept the assigned variables, and turned the "entry" variable into a logical variable. In this new dataset there are 1868 rows and 19 columns. The way that route is recorded is not tidy. I think it would make more sense to have a column for route that assigned one route name per row (so each entry would probably have mutiple rows). I was going to make it longer now; however, doing so would make it more difficult to answer a question about proportion of entrances with vending below.**
 
 ## Investigate
 
@@ -204,7 +205,7 @@ nrow(merged_df)
 
 Write a paragraph about these data; you are encouraged to use inline R. Be sure to note the number of observations in the resulting dataset, and give examples of key variables. For available data, what was the total weight of trash collected by Professor Trash Wheel? What was the total number of cigarette butts collected by Gwynnda in June of 2022?
 
-The `mr_df` dataset had `nrow(mr_df)`observations, Professor Trash Wheel `nrow(prof_df)` and Gwynnda `nrow(gwynn)`. There are `nrow(merged_df)` observations in the joined dataset `merged_df` which is equivalent to the sum of the observations in the three datasets. See `num` above. There are 15 columns including date of dumpster recording, the dumpster number for each specific trash wheel, tons of trash collected per collection time, and weights of various different types of waste. For example, Professor Trash Wheel collected `prof_trash_weight` tons of trash and Gwynnda collected `cigs_june_gwyn` cigarette butts in June of 2022.  
+**The `mr_df` dataset had `nrow(mr_df)`observations, Professor Trash Wheel `nrow(prof_df)` and Gwynnda `nrow(gwynn)`. There are `nrow(merged_df)` observations in the joined dataset `merged_df` which is equivalent to the sum of the observations in the three datasets. See `num` above. There are 15 columns including date of dumpster recording, the dumpster number for each specific trash wheel, tons of trash collected per collection time, and weights of various different types of waste. For example, Professor Trash Wheel collected `prof_trash_weight` tons of trash and Gwynnda collected `cigs_june_gwyn` cigarette butts in June of 2022.**  
 
 ```{r writing}
 prof_trash_weight=
@@ -252,7 +253,7 @@ results =
   
 nrow(results) 
 ```
-Here I joined the bakes df into the results df I did it in such a way because the results df had the most observations. Bakes didn't have complete data after season 8. 
+Here I joined the bakes df into the results df I did it in such a way because the results df had the most observations. Bakes didn't have complete data after series 8. 
 ```{r first join}
 results_bakes = 
   results |> 
@@ -287,42 +288,57 @@ write_csv(results_bakes_names, "Data/gbb_datasets/20241001_results_bakes_names.c
 
 Describe your data cleaning process, including any questions you have or choices you made. Briefly discuss the final dataset.
 
-Throughout the above steps clean and merge the three separate datasets (bakers, bakes, results) by their common columns (season and baker).
-During this process, I ensured that there were no duplicated rows and checked for consistent column names.
-New variables were added (e.g., star_baker and result) to indicate performance in each season.
+**Throughout the above steps I load, clean, and merge the three separate datasets (bakers, bakes, results) by their common columns. I omitted rows in the results dataset and created a new name variable that separated first and last name. This new dataset has `nrow(results_bakes_names)` observations and 11 columns. Each of the columns I chose to keep and in what order as assigned above.**
 
 ## Table 
+
 Create a reader-friendly table showing the star baker or winner of each episode in Seasons 5 through 10. Comment on this table – were there any predictable overall winners? Any surprises?
 
-Create a table showing the star baker or winner for each episode in Seasons 5 through 10
-star_baker_table <- final_df |> 
-  filter(season >= 5, !is.na(star_baker)) |> 
-  select(season, episode, baker, result) |> 
-  arrange(season, episode)
+**I am not surprised. Honestly I have no emotions related to the winner (or loser) of this show. I think the table looks okay, maybe not publishable. I would like to learn to play with the spacing and titles, etc. ** 
+```{r}
+star_baker_table = 
+  results_bakes_names |> 
+  filter(series >= 5, result %in% c("STAR BAKER", "WINNER")) |> 
+  select(series, episode, baker, result) |> 
+  arrange(series, episode)
 
-Display the table
-print(star_baker_table)
+star_baker_table |> 
+  kable(caption = "Star Bakers and Winners from Series 5 and Up")
+```
 
 ## I, C, T, O Viewership
+
 Import, clean, tidy, and organize the viewership data in viewers.csv. Show the first 10 rows of this dataset. What was the average viewership in Season 1? In Season 5?
 
-Import, clean, tidy, and organize the viewership data in viewers.csv
-viewers <- read_csv("Data/gbb_datasets/viewers.csv", show_col_types = FALSE)
+**Average viewership in series 1 was `viewers_s1`, average viewership in series 5 was `viewers_s5`.**
 
-Clean and organize viewership data
-viewers_clean <- viewers |> 
-  clean_names() |> 
-  group_by(season) |> 
-  summarise(average_viewership = mean(viewers, na.rm = TRUE))
+```{r}
+viewers=
+  read_csv("Data/gbb_datasets/viewers.csv", show_col_types = FALSE) |>
+  janitor::clean_names() |> 
+  pivot_longer(
+    cols = series_1:series_10, 
+    names_to = "series", 
+    values_to = "viewership"
+  ) |> 
+  mutate(series = str_remove(series, "series_")) |> 
+  select(series, episode, viewership)
 
-Show the first 10 rows of the cleaned viewership dataset
-head(viewers_clean, 10)
+head(viewers, 10)
 
-What was the average viewership in Season 1? In Season 5?
-season_1_viewership <- viewers_clean |> filter(season == 1) |> pull(average_viewership)
-season_5_viewership <- viewers_clean |> filter(season == 5) |> pull(average_viewership)
+viewers_s1 = 
+  viewers |> 
+  filter(series == "1") |> 
+  na.omit() |> 
+  summarise(avg_viewership = mean(viewership))
 
-Output the results
-season_1_viewership
-season_5_viewership
+viewers_s5 = 
+  viewers |> 
+  filter(series == "5") |> 
+  na.omit() |> 
+  summarise(avg_viewership = mean(viewership))
 
+viewers_s1
+viewers_s5
+
+```
